@@ -6,4 +6,5 @@ load_dotenv()
 client_id = os.getenv('CLIENT_ID')
 client_secret = os.getenv('CLIENT_SECRET')
 
-redirect_uri = 'https://localhost:8888/callback'
+redirect_uri = 'http://127.0.0.1:8888/callback'
+base_url = 'https://accounts.spotify.com'
