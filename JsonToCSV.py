@@ -1,18 +1,18 @@
 import pandas as pd
 
-#transferred data
-data = {
-    'Track name': [],
-    'Artist name': []
-}
+def song_json_csv(path):
+    data = {
+        'Track name': [],
+        'Artist name': []
+    }
+    telegramJson = pd.read_json(path)
 
-telegramJson = pd.read_json('Jsons/result.json')
-for message in telegramJson["messages"]:
-    try:
-        data['Artist name'].append(message["performer"])
-        data['Track name'].append(message["title"])
-    except:
-        continue
+    for message in telegramJson["messages"]:
+        if message.get('media_type') == 'audio_file':
+            data['Artist name'].append(message.get('performer', ''))
+            data['Track name'].append(message.get('title', ''))
+        
+        
+    df = pd.DataFrame(data)
+    df.to_csv('test.csv', index=False)
 
-df = pd.DataFrame(data)
-df.to_csv('CSVs/test.csv', index=False)
