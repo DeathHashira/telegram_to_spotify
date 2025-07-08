@@ -14,5 +14,6 @@ def song_json_csv(path):
         
         
     df = pd.DataFrame(data)
-    df.to_csv('test.csv', index=False)
+    df.to_csv(f'{path.split('.')[0]}.csv', index=False)
+
 

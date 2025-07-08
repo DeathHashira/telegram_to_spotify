@@ -134,7 +134,6 @@ class PlayList:
         }
 
         res = requests.get(url=url, params=params, headers=self.header)
-        print(res)
         tracks = res.json().get('tracks', {}).get('items', [])
         if not tracks:
             return None
@@ -142,10 +141,11 @@ class PlayList:
         return tracks[0]['uri']
 
     def add_songs(self, uris):
-        self.__create_playlist()
+        if not self.playlist_id:
+            self.__create_playlist()
         url = api_url + f'/playlists/{self.playlist_id}/tracks'
         body = {
-            'uris':[uris]
+            'uris':uris
         }
         my_header = self.header.copy()
         my_header['Content-Type'] = 'application/json'
