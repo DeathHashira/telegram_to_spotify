@@ -1,7 +1,8 @@
-from config import *
+from app.config import *
 import requests, urllib.parse, webbrowser, base64, random, string
 from http.server import HTTPServer, BaseHTTPRequestHandler
 from hashlib import sha256
+from db.database import *
 
 class AuthHandler(BaseHTTPRequestHandler):
     def do_GET(self):
@@ -54,7 +55,7 @@ class UserAccessToken:
         server.handle_request()
         return server.code
 
-    def get_access_token(self):
+    def get_access_token(self, email):
         self.__code_challenge()
         self.__request_user_athurization()
         auth_code = self.__get_code()
@@ -75,8 +76,13 @@ class UserAccessToken:
         res = requests.post(url=url, data=body, headers=header)
         self.refresh_token = res.json().get('refresh_token')
         self.access_token = res.json().get('access_token')
+        conn, cursor = open_connection()
+        add_tokens(conn=conn, cursor=cursor, access_token=self.access_token, 
+                    refresh_token=self.refresh_token, email=email)
+        close_connection(conn=conn)
+
     
-    def refresh_access_token(self):
+    def refresh_access_token(self, email):
         url = base_url + '/api/token'
         body = {
             'grant_type':'refresh_token',
@@ -90,6 +96,11 @@ class UserAccessToken:
 
         res = requests.post(url=url, data=body, headers=header)
         self.access_token = res.json().get('access_token')
+        self.access_token = res.json().get('access_token')
+        conn, cursor = open_connection()
+        add_tokens(conn=conn, cursor=cursor, access_token=self.access_token, 
+                    refresh_token=self.refresh_token, email=email)
+        close_connection(conn=conn)
 
 class PlayList:
     def __init__(self, plname, access_token, ispublic, iscollabrative):
@@ -97,20 +108,22 @@ class PlayList:
         self.header = {
             'Authorization':f'Bearer {access_token}'
         }
-        self.ispublic = ispublic
-        self.iscollabrative = iscollabrative
+        self.ispublic = 'true' if ispublic else 'false'
+        self.iscollabrative = 'true' if iscollabrative else 'false'
         self.playlist_id = None
         self.user_id = None
 
 
-    def __get_user_id(self):
+    def get_user_id(self, email):
         url = api_url + '/me'
 
         res = requests.get(url=url, headers=self.header)
         self.user_id = res.json().get('id')
+        conn, cursor = open_connection()
+        add_user_id(conn=conn, cursor=cursor, email=email, user_id=self.user_id)
+        close_connection(conn=conn)
 
     def __create_playlist(self):
-        self.__get_user_id()
         url = api_url + f'/users/{self.user_id}/playlists'
         body = {
             'name':self.plname,
@@ -122,6 +135,10 @@ class PlayList:
 
         res = requests.post(url=url, json=body, headers=my_header)
         self.playlist_id = res.json().get('id')
+        if self.playlist_id:
+            conn, cursor = open_connection()
+            add_playlist(conn=conn, cursor=cursor, user_id=self.user_id, playlist_id=self.playlist_id, playlist_name=self.plname)
+            close_connection(conn=conn)
     
     def find_uri(self, song_name, artist_name):
         query = f'track:{song_name} artist:{artist_name}'
