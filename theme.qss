@@ -1,0 +1,77 @@
+/* Base style for the entire app */
+QWidget {
+    background-color: #121212;
+    color: #FFFFFF;
+    font-family: 'Circular', 'Helvetica Neue', 'Arial', sans-serif;
+    font-size: 14px;
+}
+
+/* Buttons */
+QPushButton {
+    background-color: #1DB954;
+    color: #121212;
+    padding: 8px 20px;           /* Wider padding for pill shape */
+    border-radius: 20px;         /* Large radius for rounded effect */
+    border: none;
+    font-weight: bold;
+}
+
+QPushButton:hover {
+    background-color: #1ED760;
+}
+
+/* Text fields */
+QLineEdit, QTextEdit {
+    background-color: #2A2A2A;
+    border: 1px solid #333333;
+    border-radius: 4px;
+    color: #FFFFFF;
+    padding: 6px;
+}
+
+QLineEdit:focus, QTextEdit:focus {
+    border: 1px solid #1DB954;
+}
+
+/* Labels */
+QLabel {
+    color: #FFFFFF;
+    font-weight: normal;
+}
+
+/* Combo Boxes */
+QComboBox {
+    background-color: #2A2A2A;
+    color: #FFFFFF;
+    border: 1px solid #333333;
+    padding: 6px;
+    border-radius: 4px;
+}
+
+QComboBox QAbstractItemView {
+    background-color: #1A1A1A;
+    color: #FFFFFF;
+    selection-background-color: #1DB954;
+}
+
+/* Checkboxes and Radio buttons */
+QCheckBox, QRadioButton {
+    color: #CCCCCC;
+}
+
+/* Scrollbars */
+QScrollBar:vertical {
+    background: #121212;
+    width: 12px;
+    margin: 0px;
+}
+
+QScrollBar::handle:vertical {
+    background: #535353;
+    border-radius: 6px;
+    min-height: 20px;
+}
+
+QScrollBar::handle:vertical:hover {
+    background: #1DB954;
+}
