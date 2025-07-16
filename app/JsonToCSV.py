@@ -28,3 +28,7 @@ class GetCSV:
         self.__delete_csv()
 
         return mySongs
+    
+    def export_csv(self, songs:dict):
+        df = pd.DataFrame(songs)
+        df.to_csv(f'{self.path.split('.')[0]}.csv', index=False)

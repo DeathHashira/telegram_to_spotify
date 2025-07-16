@@ -245,7 +245,10 @@ class MainWindow(QMainWindow):
 
         all_uris = {}
         numsLists = int(len(mySongs) / 100) + ((len(mySongs) % 100) != 0)
-        wasted_songs = []
+        wasted_songs = {
+            'Track name': [],
+            'Artist name': []
+        }
         for i in range(numsLists):
             all_uris[f'uris{i+1}'] = []
         
@@ -259,7 +262,8 @@ class MainWindow(QMainWindow):
                 if songURI:
                     all_uris[f'uris{counter}'].append(songURI)
                 else:
-                    wasted_songs.append(f'{mySongs['Track name'][row]} - {mySongs['Artist name'][row]}')
+                    wasted_songs['Artist name'].append(row.get('performer', ''))
+                    wasted_songs['Track name'].append(row.get('title', ''))
 
                 if len(all_uris[f'uris{counter}']) == 100:
                     counter += 1
@@ -270,6 +274,7 @@ class MainWindow(QMainWindow):
             time.sleep(0.2)
             self.load_song.update_progress()
         self.load_song_tilte.setText('Done.')
+        MyGetCSV.export_csv(wasted_songs)
 
         self.load_query.add_length(len(all_uris))
 
