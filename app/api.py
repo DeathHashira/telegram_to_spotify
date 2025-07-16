@@ -103,25 +103,15 @@ class UserAccessToken:
         close_connection(conn=conn)
 
 class PlayList:
-    def __init__(self, plname, access_token, ispublic, iscollabrative):
+    def __init__(self, plname, access_token, ispublic, iscollabrative, user_id):
         self.plname = plname
         self.header = {
             'Authorization':f'Bearer {access_token}'
         }
-        self.ispublic = 'true' if ispublic else 'false'
-        self.iscollabrative = 'true' if iscollabrative else 'false'
+        self.ispublic = ispublic
+        self.iscollabrative = iscollabrative
         self.playlist_id = None
-        self.user_id = None
-
-
-    def get_user_id(self, email):
-        url = api_url + '/me'
-
-        res = requests.get(url=url, headers=self.header)
-        self.user_id = res.json().get('id')
-        conn, cursor = open_connection()
-        add_user_id(conn=conn, cursor=cursor, email=email, user_id=self.user_id)
-        close_connection(conn=conn)
+        self.user_id = user_id
 
     def __create_playlist(self):
         url = api_url + f'/users/{self.user_id}/playlists'
@@ -139,6 +129,9 @@ class PlayList:
             conn, cursor = open_connection()
             add_playlist(conn=conn, cursor=cursor, user_id=self.user_id, playlist_id=self.playlist_id, playlist_name=self.plname)
             close_connection(conn=conn)
+        else:
+            print('something went wrong')
+
     
     def find_uri(self, song_name, artist_name):
         query = f'track:{song_name} artist:{artist_name}'
@@ -168,3 +161,30 @@ class PlayList:
         my_header['Content-Type'] = 'application/json'
 
         res = requests.post(url=url, json=body, headers=my_header)
+    
+def get_user_id(email, access_token):
+        url = api_url + '/me'
+        header = {
+            'Authorization':f'Bearer {access_token}'
+        }
+
+        res = requests.get(url=url, headers=header)
+        user_id = res.json().get('id')
+        conn, cursor = open_connection()
+        add_user_id(conn=conn, cursor=cursor, email=email, user_id=user_id)
+        close_connection(conn=conn)
+
+        return user_id
+
+def list_user_playlists(user_id, access_token):
+        url = api_url + f'/users/{user_id}/playlists'
+        header = {
+            'Authorization':f'Bearer {access_token}'
+        }
+        res = requests.get(url=url, headers=header)
+
+        playlists = []
+        for item in res.json()['items']:
+            playlists.append((item['name'], item['id']))
+
+        return playlists

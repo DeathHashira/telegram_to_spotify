@@ -2,8 +2,8 @@ from PyQt6.QtWidgets import (
     QApplication, QMainWindow, QWidget, QPushButton, QStackedLayout, QFormLayout,
     QLabel, QLineEdit, QCheckBox, QHBoxLayout, QListWidget, QVBoxLayout, QFileDialog, QProgressBar
 )
-from PyQt6.QtCore import Qt, QObject, QRunnable, pyqtSlot, pyqtSignal, QThreadPool
-from app.api import UserAccessToken, PlayList
+from PyQt6.QtCore import Qt, QRunnable, pyqtSlot, QThreadPool
+from app.api import *
 import sys, os
 from db.database import *
 from app.JsonToCSV import GetCSV
@@ -30,33 +30,36 @@ class MainWindow(QMainWindow):
         self.json_path = None
         self.access_token = None
         self.refresh_token = None
+        self.current_user_id = None
 
         self.setWindowTitle('Spotify PlayList Transfer')
         self.stacked_layout = QStackedLayout()
+        self.main_layout = QVBoxLayout()
 
         self.login_page = QWidget()
         self.signup_page = QWidget()
         self.list_page = QWidget()
         self.filter_page = QWidget()
         self.new_request_page = QWidget()
+        self.token_page = QWidget()
 
         self.login_page_layout = QFormLayout()
         self.signup_page_layout = QFormLayout()
         self.list_page_layout = QFormLayout()
         self.filter_page_layout = QFormLayout()
         self.new_request_page_layout = QFormLayout()
+        self.token_page_layout = QFormLayout()
 
         self.login_page.setLayout(self.login_page_layout)
         self.signup_page.setLayout(self.signup_page_layout)
         self.list_page.setLayout(self.list_page_layout)
         self.filter_page.setLayout(self.filter_page_layout)
         self.new_request_page.setLayout(self.new_request_page_layout)
+        self.token_page.setLayout(self.token_page_layout)
 
         self.threadpool = QThreadPool()
-        self.threadpool.setMaxThreadCount(1)
-        worker = Worker(
-            self.__starting_progress
-        )
+        self.threadpool.setMaxThreadCount(2)
+        
 
         # login page set up
             # row 1
@@ -70,30 +73,23 @@ class MainWindow(QMainWindow):
             # row 2
         self.email_fl = QLineEdit()
         self.email_fl.setPlaceholderText('Enter your email')
-        self.email_error_fl = QLabel()
+        self.error_l = QLabel()
         self.row12 = QVBoxLayout()
+        self.row12.addWidget(self.error_l)
         self.row12.addWidget(self.email_fl)
-        self.row12.addWidget(self.email_error_fl)
         self.login_page_layout.addRow(self.row12)
 
             # row 3
         self.password_fl = QLineEdit()
         self.password_fl.setPlaceholderText('Enter your password')
-        self.password_error_fl = QLabel()
         self.row13 = QVBoxLayout()
         self.row13.addWidget(self.password_fl)
-        self.row13.addWidget(self.password_error_fl)
         self.login_page_layout.addRow(self.row13)
 
             # row 4
         self.login = QPushButton('Log In')
         self.login.clicked.connect(self.__check_user)
         self.login_page_layout.addRow(self.login)
-
-            # row 5
-        self.quit = QPushButton('Quit the app')
-        self.quit.clicked.connect(self.__quit)
-        self.login_page_layout.addRow(self.quit)
 
         # signup page set up
             # row 1
@@ -106,9 +102,9 @@ class MainWindow(QMainWindow):
 
             # row 2
         self.email_fs = QLineEdit()
-        self.email_error_fs = QLabel()
+        self.error_s = QLabel()
         self.row22 = QVBoxLayout()
-        self.row22.addWidget(self.email_error_fs)
+        self.row22.addWidget(self.error_s)
         self.row22.addWidget(self.email_fs)
         self.email_fs.setPlaceholderText('Set your email')
         self.signup_page_layout.addRow(self.row22)
@@ -123,20 +119,27 @@ class MainWindow(QMainWindow):
         self.signup.clicked.connect(self.__signup_new_user)
         self.signup_page_layout.addRow(self.signup)
 
-            # row 5
-        self.quit = QPushButton('Quit the app')
-        self.quit.clicked.connect(self.__quit)
-        self.signup_page_layout.addRow(self.quit)
+        # token page
+            # row 1
+        self.tokens_error = QLabel('getting access token...')
+        self.token_page_layout.addRow(self.tokens_error)
 
         # list page set up
             # row 1
-        self.row31 = QHBoxLayout()
-        self.list_title = QLabel('Your Playlists')
-        self.row31.addWidget(self.list_title)
-        self.row31.addStretch()
+        self.col31 = QHBoxLayout()
+        self.list_title = QLabel('Your Playlists:')
+        self.reload = QPushButton('Refresh List')
+        self.col31.addWidget(self.reload)
+        self.reload.clicked.connect(self.__show_playlists)
+        self.col31.addStretch()
         self.creat = QPushButton('Create new playlist')
         self.creat.clicked.connect(self.__go_to_filter)
-        self.row31.addWidget(self.creat)
+        self.col31.addWidget(self.creat)
+        self.row31 = QVBoxLayout()
+        self.row31.addLayout(self.col31)
+        self.ans = QListWidget()
+        self.row31.addWidget(self.list_title)
+        self.row31.addWidget(self.ans)
         self.list_page_layout.addRow(self.row31)
 
         # filter page
@@ -163,20 +166,11 @@ class MainWindow(QMainWindow):
 
             # row 4
         self.creat = QPushButton('Create')
-        self.creat.clicked.connect(lambda: self.threadpool.start(worker))
+        self.creat.clicked.connect(self.__go_to_new_request)
         self.filter_page_layout.addRow(self.creat)
-
-            # row 5
-        self.quit = QPushButton('Quit the app')
-        self.quit.clicked.connect(self.__quit)
-        self.filter_page_layout.addRow(self.quit)
 
         # new request page set up
             # row 1
-        self.tokens_error = QLabel()
-        self.new_request_page_layout.addRow(self.tokens_error)
-
-            # row 2
         self.load_song_tilte = QLabel()
         self.load_song = LoadingBar()
         self.row52 = QVBoxLayout()
@@ -184,7 +178,7 @@ class MainWindow(QMainWindow):
         self.row52.addWidget(self.load_song)
         self.new_request_page_layout.addRow(self.row52)
 
-            # row 3
+            # row 2
         self.load_query_tilte = QLabel('Waiting...')
         self.load_query = LoadingBar()
         self.row53 = QVBoxLayout()
@@ -192,64 +186,57 @@ class MainWindow(QMainWindow):
         self.row53.addWidget(self.load_query)
         self.new_request_page_layout.addRow(self.row53)
 
-            # row 4
-        self.quit = QPushButton('Quit the app')
-        self.quit.clicked.connect(self.__quit)
-        self.new_request_page_layout.addRow(self.quit)
-
-
         self.stacked_layout.addWidget(self.login_page)
         self.stacked_layout.addWidget(self.signup_page)
         self.stacked_layout.addWidget(self.list_page)
         self.stacked_layout.addWidget(self.filter_page)
         self.stacked_layout.addWidget(self.new_request_page)
+        self.stacked_layout.addWidget(self.token_page)
         self.stacked_layout.setCurrentIndex(1)
 
+        self.main_layout.addLayout(self.stacked_layout)
+
+        self.quit = QPushButton('Quit the app')
+        self.quit.clicked.connect(self.__quit)
+        self.new_request_page_layout.addRow(self.quit)
+
+        self.main_layout.addWidget(self.quit)
         central_widget = QWidget()
-        central_widget.setLayout(self.stacked_layout)
+        central_widget.setLayout(self.main_layout)
         self.setCentralWidget(central_widget)
 
     def __signup_new_user(self):
         if is_user_there(self.cursor, self.email_fs.text()):
-            self.email_error_fs.setText("You have account, no need to sign up.")
+            self.error_s.setText("You have account, no need to sign up.")
         else:
             add_new_user(self.conn, self.cursor, 
                         self.email_fs.text(), self.password_fs.text())
             self.stacked_layout.setCurrentIndex(0)
-
-    def __show_playlists(self):
-        if not is_user_id(self.cursor, self.current_user_email) == 0:
-            return QLabel("You haven't created any Playlist yet")
-        else:
-            ans = QListWidget()
-            for result in playlists(self.cursor, self.current_user_email):
-                ans.addItem(result[0])
-            return ans
         
     def __check_user(self):
-        if is_user_there(self.cursor, self.email_fl.text()):
-            if is_pass_correct(self.cursor, self.email_fl.text(), self.password_fl.text()):
-                self.current_user_email = self.email_fl.text()
-                self.stacked_layout.setCurrentIndex(2)
-                
-                self.list_page_layout.addRow(self.__show_playlists())
-
-                self.quit = QPushButton('Quit the app')
-                self.quit.clicked.connect(self.__quit)
-                self.list_page_layout.addRow(self.quit)
-
-            else:
-                self.password_error_fl.setText("Your password is incorrect.")
+        if is_user_there(self.cursor, self.email_fl.text()) and is_pass_correct(self.cursor, self.email_fl.text(), self.password_fl.text()):
+            self.current_user_email = self.email_fl.text()
+            self.__go_to_token()
 
         else:
-            self.email_error_fl.setText("You don't have an account.")
+            self.error_l.setText("Your username or password is wrong.")
+
+    def __show_playlists(self):
+        if not self.current_user_id:
+            if show_user_id:
+                self.current_user_id = show_user_id(cursor=self.cursor, email=self.current_user_email)
+            else:
+                self.current_user_id = get_user_id(email=self.current_user_email, access_token=self.access_token)
+        the_playlists = list_user_playlists(user_id=self.current_user_id, access_token=self.access_token)
+        update_playlist(self.conn, self.cursor, self.current_user_id, *the_playlists)
+        for result in playlists(self.cursor, self.current_user_email):
+            self.ans.addItem(result[0])
+        return self.ans
 
     def __starting_progress(self):
-        worker_conn, worker_cursor = open_connection()
         self.stacked_layout.setCurrentIndex(4)
-        self.__get_tokens(worker_cursor=worker_cursor)
         MyPlayList = PlayList(plname=self.plname.text(), access_token=self.access_token, 
-                        ispublic=self.ispub.isChecked(), iscollabrative=self.iscoll.isChecked())
+                        ispublic=self.ispub.isChecked(), iscollabrative=self.iscoll.isChecked(), user_id=self.current_user_id)
         
         MyGetCSV = GetCSV(self.json_path)
         mySongs = MyGetCSV.song_json_csv()
@@ -286,23 +273,22 @@ class MainWindow(QMainWindow):
 
         self.load_query.add_length(len(all_uris))
 
-        MyPlayList.get_user_id(email=self.current_user_email)
-
         self.load_query_tilte.setText('Adding songs to the playlist...')
         for key in all_uris:
             MyPlayList.add_songs(uris=all_uris[key])
             self.load_query.update_progress()
         self.load_query_tilte.setText("Done.")
-        close_connection(worker_conn)
+        self.stacked_layout.setCurrentIndex(2)
 
                 
-    def __get_tokens(self, worker_cursor:sqlite3.Cursor):
+    def __get_tokens(self):
+        worker_conn, worker_cursor = open_connection()
         MyAccessToken = UserAccessToken()
         self.access_token, self.refresh_token = get_tokens(worker_cursor, self.current_user_email)
         if not self.access_token:
             self.tokens_error.setText("The access token not found. redirecting to the authorization.")
             MyAccessToken.get_access_token(self.current_user_email)
-            self.__get_tokens(worker_cursor=worker_cursor)
+            self.access_token, self.refresh_token = get_tokens(worker_cursor, self.current_user_email)
             
         else:
             response = requests.get("https://api.spotify.com/v1/me", headers={
@@ -311,10 +297,13 @@ class MainWindow(QMainWindow):
             if response.status_code == 401:
                 self.tokens_error.setText('The access token has expired. getting new access token from refresh token.')
                 MyAccessToken.refresh_access_token(self.current_user_email)
-                self.__get_tokens(worker_cursor=worker_cursor)
+                self.access_token, self.refresh_token = get_tokens(worker_cursor, self.current_user_email)
             
             else:
                 self.tokens_error.setText('Getting the access token successfully.')
+            
+        close_connection(worker_conn)
+        self.stacked_layout.setCurrentIndex(2)
             
 
     def __go_to_login(self):
@@ -329,6 +318,19 @@ class MainWindow(QMainWindow):
     def __get_file_path(self):
         self.json_path = self.upload.upload_file()
         self.show_file_path.setText(self.json_path)
+
+    def __go_to_new_request(self):
+        worker = Worker(
+            self.__starting_progress
+        )
+        self.threadpool.start(worker)
+
+    def __go_to_token(self):
+        worker = Worker(
+            self.__get_tokens
+        )
+        self.stacked_layout.setCurrentIndex(5)
+        self.threadpool.start(worker)
 
     def __quit(self):
         close_connection(self.conn)
