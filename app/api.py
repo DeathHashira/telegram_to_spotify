@@ -83,10 +83,12 @@ class UserAccessToken:
 
     
     def refresh_access_token(self, email):
+        conn, cursor = open_connection()
+        cursor.execute('SELECT refresh_token from users WHERE email = ?', (email,))
         url = base_url + '/api/token'
         body = {
             'grant_type':'refresh_token',
-            'refresh_token':self.refresh_token,
+            'refresh_token':cursor.fetchone()[0],
             'client_id':client_id
         }
 
@@ -97,7 +99,6 @@ class UserAccessToken:
         res = requests.post(url=url, data=body, headers=header)
         self.access_token = res.json().get('access_token')
         self.access_token = res.json().get('access_token')
-        conn, cursor = open_connection()
         add_tokens(conn=conn, cursor=cursor, access_token=self.access_token, 
                     refresh_token=self.refresh_token, email=email)
         close_connection(conn=conn)
@@ -144,11 +145,14 @@ class PlayList:
         }
 
         res = requests.get(url=url, params=params, headers=self.header)
-        tracks = res.json().get('tracks', {}).get('items', [])
-        if not tracks:
+        if res.status_code == 200:
+            tracks = res.json().get('tracks', {}).get('items', [])
+            if not tracks:
+                return None
+            
+            return tracks[0]['uri']
+        else:
             return None
-        
-        return tracks[0]['uri']
 
     def add_songs(self, uris):
         if not self.playlist_id:

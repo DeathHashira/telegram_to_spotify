@@ -4,7 +4,7 @@ from PyQt6.QtWidgets import (
 )
 from PyQt6.QtCore import Qt, QRunnable, pyqtSlot, QThreadPool
 from app.api import *
-import sys, os
+import os
 from db.database import *
 from app.JsonToCSV import GetCSV
 import time, requests
@@ -23,7 +23,7 @@ class Worker(QRunnable):
 class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
-        self.setFixedSize(500, 250)
+        self.setFixedSize(500, 350)
 
         self.conn, self.cursor = open_connection()
         self.current_user_email = None
@@ -262,8 +262,9 @@ class MainWindow(QMainWindow):
                 if songURI:
                     all_uris[f'uris{counter}'].append(songURI)
                 else:
-                    wasted_songs['Artist name'].append(row.get('performer', ''))
-                    wasted_songs['Track name'].append(row.get('title', ''))
+                    wasted_songs['Artist name'].append(mySongs['Track name'][row])
+                    wasted_songs['Track name'].append(mySongs['Artist name'][row])
+                    time.sleep(5)
 
                 if len(all_uris[f'uris{counter}']) == 100:
                     counter += 1
@@ -370,17 +371,3 @@ class LoadingBar(QProgressBar):
     def update_progress(self):
         self.start += 1
         self.setValue(int((self.start / self.length) * 100))
-
-
-
-
-def load_stylesheet(file_path):
-    with open(file_path, "r") as f:
-        return f.read()
-
-app = QApplication(sys.argv)
-app.setStyleSheet(load_stylesheet("theme.qss"))
-MyMainWindow = MainWindow()
-
-MyMainWindow.show()
-sys.exit(app.exec())
