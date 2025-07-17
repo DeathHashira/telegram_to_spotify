@@ -19,6 +19,9 @@ class AuthHandler(BaseHTTPRequestHandler):
             self.end_headers()
             self.wfile.write(b'Missing authorization code.')
 
+    def log_message(self, format, *args):
+        pass
+
 class UserAccessToken:
     def __init__(self):
         self.verified_code = None
@@ -51,7 +54,6 @@ class UserAccessToken:
 
     def __get_code(self):
         server = HTTPServer(('localhost', 8888), AuthHandler)
-        print("Waiting for Spotify redirect...")
         server.handle_request()
         return server.code
 
@@ -131,7 +133,7 @@ class PlayList:
             add_playlist(conn=conn, cursor=cursor, user_id=self.user_id, playlist_id=self.playlist_id, playlist_name=self.plname)
             close_connection(conn=conn)
         else:
-            print('something went wrong')
+            pass
 
     
     def find_uri(self, song_name, artist_name):
