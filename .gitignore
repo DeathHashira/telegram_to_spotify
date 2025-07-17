@@ -7,3 +7,5 @@ thingsihavetodo.txt
 build/
 dist/
 __pycache__/
+
+.zip
