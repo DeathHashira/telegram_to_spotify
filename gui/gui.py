@@ -3,11 +3,11 @@ from PyQt6.QtWidgets import (
     QLabel, QLineEdit, QCheckBox, QHBoxLayout, QListWidget, QVBoxLayout, QFileDialog, QProgressBar
 )
 from PyQt6.QtCore import Qt, QRunnable, pyqtSlot, QThreadPool
+from PyQt6.QtGui import QIcon
 from app.api import *
-import os
 from db.database import *
 from app.JsonToCSV import GetCSV
-import time, requests
+import time, requests, os
 
 class Worker(QRunnable):
     def __init__(self, function, *args, **kwargs):
@@ -24,6 +24,7 @@ class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
         self.setFixedSize(500, 350)
+        self.setWindowIcon(QIcon("icon.ico"))
 
         self.conn, self.cursor = open_connection()
         self.current_user_email = None
